@@ -5,11 +5,14 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace DVT.Elevator.Interface.Elevator
+namespace DVT.Elevator.Abstract.Elevator
 {
     public abstract class ElevatorBase
     {
-        public string Name { get; set; } = string.Empty;
+        public Guid Id { get; set; }
+        public ElevatorType ElevatorType { get; set; }
+        public ElevatorMovement Direction { get; set; }
+        public ElevatorState ElevatorState { get; set; }
         public int CurrentFloorNumber { get; set; }
         public abstract void MoveElevator(ElevatorMovement elevatorMovement);
     }

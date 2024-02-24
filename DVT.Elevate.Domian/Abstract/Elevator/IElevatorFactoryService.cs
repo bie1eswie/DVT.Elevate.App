@@ -5,10 +5,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace DVT.Elevator.Interface.Elevator
+namespace DVT.Elevator.Abstract.Elevator
 {
-    public interface IElevatorControlCenter
+    public interface IElevatorFactoryService
     {
-        Task CreateElevator(ElevatorType elevatorType);
+        Task<ElevatorBase> CreateElevator();
     }
 }

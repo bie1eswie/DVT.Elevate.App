@@ -1,5 +1,5 @@
 ﻿using DVT.Elevate.Domian.Enums;
-using DVT.Elevator.Interface.Elevator;
+using DVT.Elevator.Abstract.Elevator;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,10 +12,25 @@ namespace DVT.Elevate.Domian.Elevator
     {
         public int PassengerLimit { get; set; }
         public int CurrentNumberOfPassengersOnBoard { get; set; }
+        public List<ElevatorRequest> RequestsOnBoard { get; set; }
+
+        public PassengerElevator()
+        {
+           RequestsOnBoard = new List<ElevatorRequest>();
+           Id = Guid.NewGuid();
+        }
 
         public override void MoveElevator(ElevatorMovement elevatorMovement)
         {
-            throw new NotImplementedException();
+            switch (elevatorMovement)
+            {
+                case ElevatorMovement.Up:
+                    CurrentFloorNumber++;
+                    break;
+                case ElevatorMovement.Down:
+                    CurrentFloorNumber--; break;
+                    
+            }
         }
     }
 }

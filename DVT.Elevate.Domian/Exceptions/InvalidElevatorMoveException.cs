@@ -4,10 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace DVT.Elevate.Infrastructure.Extentsions
+namespace DVT.Elevate.Domian.Exceptions
 {
-    public static class DependencyInjection
+    public class InvalidElevatorMoveException: Exception
     {
-        
+
     }
 }

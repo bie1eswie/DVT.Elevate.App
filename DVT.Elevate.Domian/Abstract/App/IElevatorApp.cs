@@ -4,10 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace DVT.Elevate.Infrastructure.Extentsions
+namespace DVT.Elevate.Domian.Abstract.App
 {
-    public static class DependencyInjection
+    public interface IElevatorApp
     {
-        
+        void Execute();
     }
 }
