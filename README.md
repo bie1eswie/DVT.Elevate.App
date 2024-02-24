@@ -15,3 +15,10 @@ This where the domain specific logic leaves, I have identified the domain actors
 #### Console App
 
 This the entry point to the problem solution. This part of the solutions is the point of user interaction.
+
+# Design Patterns
+I went with a folowing design patterns
+#### Abstract Factory Pattern
+
+I went with the design pattern for the creation of the elevator objects. This approach allows for the Open Close principle of the SOLID Principles. 
+
