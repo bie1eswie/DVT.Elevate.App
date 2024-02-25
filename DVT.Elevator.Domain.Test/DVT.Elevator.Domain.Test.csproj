@@ -17,4 +17,12 @@
     <PackageReference Include="coverlet.collector" Version="3.2.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Elevator\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DVT.Elevate.Domian\DVT.Elevate.Domian.csproj" />
+  </ItemGroup>
+
 </Project>

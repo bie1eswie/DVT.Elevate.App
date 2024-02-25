@@ -11,6 +11,7 @@ namespace DVT.Elevate.Service.Elevator
 {
     public class PassengerElevatorFactoryService : IElevatorFactoryService
     {
+        public PassengerElevatorFactoryService() { }
         public Task<ElevatorBase> CreateElevator()
         {
             ElevatorBase elevator = new PassengerElevator();

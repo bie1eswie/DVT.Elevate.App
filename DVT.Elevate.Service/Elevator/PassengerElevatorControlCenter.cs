@@ -14,12 +14,12 @@ using System.Threading.Tasks;
 
 namespace DVT.Elevate.Service.Elevator
 {
-    public class ElevatorControlCenter: IElevatorControlCenter
+    public class PassengerElevatorControlCenter: IElevatorControlCenter
     {
         private readonly IElevatorFactoryService _elevatorFactoryService;
         private readonly IOptions<ConfigurationOptions> _appConfig;
         private Building building { get; set; }
-        public ElevatorControlCenter(IElevatorFactoryService elevatorFactoryService, IOptions<ConfigurationOptions> appConfig)
+        public PassengerElevatorControlCenter(IElevatorFactoryService elevatorFactoryService, IOptions<ConfigurationOptions> appConfig)
         {
             _elevatorFactoryService = elevatorFactoryService;
             building = new Building(appConfig.Value.NumberOfFloors);
@@ -57,8 +57,14 @@ namespace DVT.Elevate.Service.Elevator
         /// <exception cref="ElevatorNonFoundException"></exception>
         public async Task<ElevatorBase?> ProcessElevatorRequestQueue(ElevatorRequest nextRequest)
         {
-            Console.WriteLine($"Object hash code ProcessElevatorRequestQueue {this.GetHashCode()}");
-
+            if(nextRequest.NumberOfPassengers > _appConfig.Value.PassengerLimit)
+            {
+                throw new ArgumentOutOfRangeException("The number of passengers is more than the passenger limit of the elevators");
+            }
+            if(nextRequest.RequestedFloorNumber > _appConfig.Value.NumberOfFloors)
+            {
+                throw new ArgumentOutOfRangeException("The foor of destination can not be greater than the number of floors in the building");
+            }
             PassengerElevator nearestElevator = new PassengerElevator();
             Console.WriteLine("--------------------------------------------------------------");
             var availableElevators = await building.GetAvailableElevatorsByType(nextRequest.ElevatorType,nextRequest.Direction);
@@ -74,18 +80,27 @@ namespace DVT.Elevate.Service.Elevator
             switch (nextRequest.Direction)
             {
                 case ElevatorMovement.Up:
-                    var elevatorsBellow = sortedList.Where(x => (x.CurrentFloorNumber <= nextRequest.FloorNumber) && (x.CurrentNumberOfPassengersOnBoard < x.PassengerLimit));
+                    //filter the list of elevators for the folowing conditions
+                    //The current floor of the elevator is less than the request's floor number
+                    //The number of pasengers on the elevator is less than the passenger limit that the elevatr can take
+                    //The number of passengers in the current request + the number of passengers on the elevator is less than the passenger limit
+
+                    var elevatorsBellow = sortedList.Where(x => (x.CurrentFloorNumber <= nextRequest.FloorNumber) && 
+                                                                (x.CurrentNumberOfPassengersOnBoard < x.PassengerLimit) && 
+                                                                (x.PassengerLimit > (x.CurrentNumberOfPassengersOnBoard + nextRequest.NumberOfPassengers)));
+
                     nearestElevator = elevatorsBellow.MaxBy(x => x.CurrentFloorNumber);
                     break;
                 case ElevatorMovement.Down:
-                    foreach(var availableElevator in sortedList)
-                    {
-                        if ((nextRequest.FloorNumber > availableElevator.CurrentFloorNumber) && (availableElevator.CurrentNumberOfPassengersOnBoard < availableElevator.PassengerLimit)) 
-                        { 
-                            nearestElevator = availableElevator;
-                            break;
-                        }
-                    }
+                    //Filter the list of elevators for the folowing conditions
+                    //The current floor of the elevator is greater than the request's floor number
+                    //The number of passengers in the current request + the number of passengers on the elevator is less than the passenger limit
+                    //The number of pasengers on the elevator is less than the passenger limit that the elevatr can take
+
+                    var elevatorsAbove = sortedList.Where(x => (nextRequest.FloorNumber > x.CurrentFloorNumber) &&
+                                                               (x.CurrentNumberOfPassengersOnBoard < x.PassengerLimit) &&
+                                                               (x.PassengerLimit > (x.CurrentNumberOfPassengersOnBoard + nextRequest.NumberOfPassengers)));
+                    nearestElevator = elevatorsAbove.MinBy(x => x.CurrentFloorNumber);
                     break;
             }
             //We have picked an elevator that is already in use and we are going to update the data
@@ -130,19 +145,25 @@ namespace DVT.Elevate.Service.Elevator
         /// <returns></returns>
         public Task UpdateElevatorStates()
         {
-                foreach (var elevator in building.PassengerElevators)
+            foreach (var elevator in building.PassengerElevators)
+            {
+                if (elevator.Direction == ElevatorMovement.Up && elevator.CurrentFloorNumber < building.NumberOfFloors)
                 {
-                    if (elevator.Direction == ElevatorMovement.Up && elevator.CurrentFloorNumber < building.NumberOfFloors)
-                    {
-                        elevator.MoveElevator(elevator.Direction);
-                        if (elevator.CurrentFloorNumber == building.NumberOfFloors) elevator.ElevatorState = ElevatorState.Stationary;
-                    }
-                    else if (elevator.Direction == ElevatorMovement.Down && elevator.CurrentFloorNumber > 0)
-                    {
-                        elevator.MoveElevator(elevator.Direction);
-                        if (elevator.CurrentFloorNumber == 0) elevator.ElevatorState = ElevatorState.Stationary;
-                    }
+                    elevator.MoveElevator(elevator.Direction);
+                    if (elevator.CurrentFloorNumber == building.NumberOfFloors) elevator.ElevatorState = ElevatorState.Stationary;
                 }
+                else if (elevator.Direction == ElevatorMovement.Down && elevator.CurrentFloorNumber > 0)
+                {
+                    elevator.MoveElevator(elevator.Direction);
+                    if (elevator.CurrentFloorNumber == 0) elevator.ElevatorState = ElevatorState.Stationary;
+                }
+                else
+                {
+                    throw new InvalidElevatorMoveException($"PassengerElevatorControlCenter - UpdateElevatorStates: The move was invalid for elevator {elevator.Id} at floor number{elevator.CurrentFloorNumber}");
+                }
+                var requests = elevator.RequestsOnBoard.Where(x => x.RequestedFloorNumber == elevator.CurrentFloorNumber).ToList();
+                elevator.CurrentNumberOfPassengersOnBoard -= (requests != null && requests.Any()) ? requests.Sum(x=>x.NumberOfPassengers): 0;
+            }
 
            return Task.CompletedTask;
         }

@@ -8,6 +8,9 @@ namespace DVT.Elevate.Domian.Exceptions
 {
     public class InvalidElevatorMoveException: Exception
     {
-
+        public InvalidElevatorMoveException(string message)
+    : base(message)
+        {
+        }
     }
 }

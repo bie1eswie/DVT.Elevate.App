@@ -26,22 +26,13 @@ builderHost.ConfigureLogging(logger =>
 var _host = builderHost.ConfigureServices(services =>
 {
     services.AddTransient<IElevatorFactoryService, PassengerElevatorFactoryService>();
-    services.AddSingleton<IElevatorControlCenter, ElevatorControlCenter>();
+    services.AddSingleton<IElevatorControlCenter, PassengerElevatorControlCenter>();
     services.AddSingleton<IElevatorApp, ElevatorApp>();
     services.Configure<ConfigurationOptions>(config, x => x.BindNonPublicProperties = true);
     services.AddHostedService<ElevatorControlEngine>();
 }).Build();
 
 var app = _host.Services.GetRequiredService<IElevatorApp>();
-
-Parallel.Invoke(() =>
-                {
-                   _host.Run();
-                   
-                },
-                () =>
-                {
-                    app.Execute();
-                });
+Parallel.Invoke(_host.Run, app.Execute);
 
 
