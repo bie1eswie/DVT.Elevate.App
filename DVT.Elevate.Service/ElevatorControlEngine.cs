@@ -27,7 +27,7 @@ namespace DVT.Elevate.Service
             while(!stoppingToken.IsCancellationRequested)
             {
                 await _elevatorControlCenter.UpdateElevatorStates();
-                await Task.Delay(50000, stoppingToken);
+                await Task.Delay(20000, stoppingToken);
             }
         }
     }

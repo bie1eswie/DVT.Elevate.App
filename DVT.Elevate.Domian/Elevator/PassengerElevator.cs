@@ -25,8 +25,7 @@ namespace DVT.Elevate.Domian.Elevator
             switch (elevatorMovement)
             {
                 case ElevatorMovement.Up:
-                    CurrentFloorNumber++;
-                    break;
+                    CurrentFloorNumber++; break;
                 case ElevatorMovement.Down:
                     CurrentFloorNumber--; break;
                     

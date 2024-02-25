@@ -14,5 +14,6 @@ namespace DVT.Elevate.Domian.Elevator
         public ElevatorType ElevatorType { get; set; }
         public ElevatorMovement Direction { get; set; }
         public int RequestedFloorNumber {  get; set; }
+        public ElevatorRequestStatus Status { get; set; } = ElevatorRequestStatus.Requested;
     }
 }

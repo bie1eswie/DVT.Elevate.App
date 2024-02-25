@@ -49,6 +49,7 @@ namespace DVT.Elevate.Service.Elevator
                 catch(Exception ex)
                 {
                     Console.WriteLine(ex.Message.ToString());
+                    await _controlCenter.ShowElevatorState();
                 }
             }
         }

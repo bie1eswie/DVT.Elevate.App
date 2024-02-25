@@ -65,6 +65,10 @@ namespace DVT.Elevate.Service.Elevator
             {
                 throw new ArgumentOutOfRangeException("The foor of destination can not be greater than the number of floors in the building");
             }
+            if (nextRequest.FloorNumber > _appConfig.Value.NumberOfFloors)
+            {
+                throw new ArgumentOutOfRangeException("Your floor number can not be greater than the number of floors in the building");
+            }
             PassengerElevator nearestElevator = new PassengerElevator();
             Console.WriteLine("--------------------------------------------------------------");
             var availableElevators = await building.GetAvailableElevatorsByType(nextRequest.ElevatorType,nextRequest.Direction);
@@ -73,6 +77,8 @@ namespace DVT.Elevate.Service.Elevator
             if(availableElevators == null || !availableElevators.Any())
             {
                 nearestElevator =  await this.createElevator(nextRequest);
+                nextRequest.Status = ElevatorRequestStatus.Accepted;
+                nearestElevator.RequestsOnBoard.Add(nextRequest);
                 return nearestElevator;
             }
             //Sort the available elevators by floor number
@@ -97,7 +103,7 @@ namespace DVT.Elevate.Service.Elevator
                     //The number of passengers in the current request + the number of passengers on the elevator is less than the passenger limit
                     //The number of pasengers on the elevator is less than the passenger limit that the elevatr can take
 
-                    var elevatorsAbove = sortedList.Where(x => (nextRequest.FloorNumber > x.CurrentFloorNumber) &&
+                    var elevatorsAbove = sortedList.Where(x => (nextRequest.FloorNumber >= x.CurrentFloorNumber) &&
                                                                (x.CurrentNumberOfPassengersOnBoard < x.PassengerLimit) &&
                                                                (x.PassengerLimit > (x.CurrentNumberOfPassengersOnBoard + nextRequest.NumberOfPassengers)));
                     nearestElevator = elevatorsAbove.MinBy(x => x.CurrentFloorNumber);
@@ -109,6 +115,7 @@ namespace DVT.Elevate.Service.Elevator
                 var newPassengerElevator = nearestElevator;
                 newPassengerElevator.Direction = nextRequest.Direction;
                 newPassengerElevator.ElevatorState = ElevatorState.InMotion;
+                if(nextRequest.FloorNumber == nearestElevator.CurrentFloorNumber)
                 newPassengerElevator.CurrentNumberOfPassengersOnBoard += nextRequest.NumberOfPassengers;
                 newPassengerElevator.RequestsOnBoard.Add(nextRequest);
                 building.UpdatePassengerElevator(newPassengerElevator);
@@ -143,7 +150,7 @@ namespace DVT.Elevate.Service.Elevator
         /// Update elevator movement
         /// </summary>
         /// <returns></returns>
-        public Task UpdateElevatorStates()
+        public async Task UpdateElevatorStates()
         {
             foreach (var elevator in building.PassengerElevators)
             {
@@ -161,11 +168,29 @@ namespace DVT.Elevate.Service.Elevator
                 {
                     throw new InvalidElevatorMoveException($"PassengerElevatorControlCenter - UpdateElevatorStates: The move was invalid for elevator {elevator.Id} at floor number{elevator.CurrentFloorNumber}");
                 }
-                var requests = elevator.RequestsOnBoard.Where(x => x.RequestedFloorNumber == elevator.CurrentFloorNumber).ToList();
-                elevator.CurrentNumberOfPassengersOnBoard -= (requests != null && requests.Any()) ? requests.Sum(x=>x.NumberOfPassengers): 0;
-            }
+                //get all the elevator request with destination being the current floor and let the passengers off the elevator
+                var destinationRequests = elevator.RequestsOnBoard.Where(x => x.RequestedFloorNumber == elevator.CurrentFloorNumber && x.Status == ElevatorRequestStatus.Accepted).ToList();
+                var destinationRequestsSum = destinationRequests.Sum(x => x.NumberOfPassengers);
+                elevator.CurrentNumberOfPassengersOnBoard -= (destinationRequests != null && destinationRequests.Any()) ? destinationRequestsSum : 0;
 
-           return Task.CompletedTask;
+                //get all the elevator user request on the current floor and let those passengers on to the elevator
+                //if the elevator is full then we will request another one for the passengers
+                var requests = elevator.RequestsOnBoard.Where(x => x.FloorNumber == elevator.CurrentFloorNumber && x.Status == ElevatorRequestStatus.Requested).ToList();
+                foreach ( var request in requests )
+                {
+                    if((request.NumberOfPassengers + elevator.CurrentNumberOfPassengersOnBoard) < elevator.PassengerLimit)
+                    {
+                        elevator.CurrentNumberOfPassengersOnBoard += request.NumberOfPassengers;
+                        request.Status = ElevatorRequestStatus.Accepted;
+                    }
+                    else
+                    {
+                        elevator.RequestsOnBoard.Remove(request);
+                        request.Status = ElevatorRequestStatus.Requested;
+                        await this.ProcessElevatorRequestQueue(request);
+                    }
+                }
+            }
         }
 
         public int GetBuildingNumberOfFloors()
